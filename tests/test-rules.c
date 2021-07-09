@@ -1299,6 +1299,36 @@ static void test_hex_strings()
         condition: !a == 2 }",
       "122222222" TEXT_1024_BYTES);
 
+  assert_true_rule(
+      "rule test { \
+        strings: $a = { 30 31 32 [0-5] 38 39 } \
+        condition: $a }",
+      "0123456789");
+
+  assert_true_rule(
+      "rule test { \
+        strings: $a = { 31 32 [0-5] 38 39 30 } \
+        condition: $a }",
+      "1234567890");
+
+  assert_true_rule(
+      "rule test { \
+        strings: $a = { 31 32 [0-2] 34 [0-2] 34 } \
+        condition: $a }",
+      "1244");
+
+  assert_true_rule(
+      "rule test { \
+        strings: $a = { 31 32 [0-2] 34 [0-2] 34 } \
+        condition: $a }",
+      "12344");
+
+  assert_true_rule(
+      "rule test { \
+        strings: $a = { 31 32 [0-2] 34 [0-2] 34 [2-3] 34 } \
+        condition: $a }",
+      "123440004");
+
   assert_error(
       "rule test { \
         strings: $a = { 01 [0] 02 } \
@@ -2559,19 +2589,39 @@ static void test_modules()
 
   assert_true_rule(
       "import \"tests\" \
-      rule test { condition: tests.match(/foo/,\"bar\") == -1\
+      rule test { condition: tests.match(/foo/,\"bar\") == -1 \
       }",
       NULL);
 
   assert_true_rule(
       "import \"tests\" \
-      rule test { condition: tests.match(/foo.bar/i,\"FOO\\nBAR\") == -1\
+      rule test { condition: tests.match(/foo.bar/i,\"FOO\\nBAR\") == -1 \
       }",
       NULL);
 
   assert_true_rule(
       "import \"tests\" \
-      rule test { condition: tests.match(/foo.bar/is,\"FOO\\nBAR\") == 7\
+      rule test { condition: tests.match(/foo.bar/is,\"FOO\\nBAR\") == 7 \
+      }",
+      NULL);
+
+  assert_false_rule(
+      "import \"tests\" \
+      rule test { \
+        condition: \
+          for any k,v in tests.empty_struct_array[0].struct_dict: ( \
+            v.unused == \"foo\" \
+          ) \
+      }",
+      NULL);
+
+  assert_false_rule(
+      "import \"tests\" \
+      rule test { \
+        condition: \
+          for any item in tests.empty_struct_array[0].struct_array: ( \
+            item.unused == \"foo\" \
+          ) \
       }",
       NULL);
 
@@ -2792,7 +2842,7 @@ void test_process_scan()
             "/bin/sh",
             "/bin/sh",
             "-c",
-            "VAR='Hello, world!'; sleep 5; true",
+            "VAR='Hello, world!'; sleep 600; true",
             NULL) == -1)
       exit(1);
   }
